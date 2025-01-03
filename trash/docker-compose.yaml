@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: backend-service
+    ports:
+      - "4000:4000" 
+    restart: unless-stopped
+   
+    # environment:
+    #   - CLOUDINARY_CLOUD_NAME=deol3dlnt
+    #   - CLOUDINARY_API_KEY=313571762391458
+    #   - CLOUDINARY_API_SECRET=Ct1btcutm9MCuSSQSSMf8RhQnds
+    #   - PORT=4000
+    # command: npm start
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    container_name: frontend-service
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    container_name: webserver-service
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+
