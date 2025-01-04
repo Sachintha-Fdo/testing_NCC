@@ -1,0 +1,114 @@
+pipeline {
+    agent any
+    environment {
+        // Set up environment variables
+        BACKEND_DIR = 'backend'
+        FRONTEND_DIR = 'frontend'
+        NGINX_DIR = 'nginx'
+    }
+    stages {
+        stage('Declarative: Tool Install') {
+            steps {
+                echo 'Installing necessary tools...'
+                // Install necessary tools if needed
+            }
+        }
+        stage('Git Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/Sachintha-Fdo/testing_NCC',
+                        credentialsId: '1ae7a64e-218b-4512-b3e4-aec12c5bd32b'
+                    ]]
+                ])
+            }
+        }
+        stage('Setup Directories') {
+            steps {
+                script {
+                    bat """
+                    if not exist "${BACKEND_DIR}" mkdir "${BACKEND_DIR}"
+                    if not exist "${FRONTEND_DIR}" mkdir "${FRONTEND_DIR}"
+                    if not exist "${NGINX_DIR}" mkdir "${NGINX_DIR}"
+                    """
+                }
+            }
+        }
+        stage('Prepare Backend') {
+            steps {
+                dir(BACKEND_DIR) {
+                    script {
+                        bat """
+                        move ../backend/.dockerignore .
+                        move ../backend/.env .
+                        move ../backend/app.js .
+                        move ../backend/Dockerfile .
+                        move ../backend/package-lock.json .
+                        move ../backend/package.json .
+                        move ../backend/server.js .
+                        """
+                    }
+                }
+            }
+        }
+        stage('Prepare Frontend') {
+            steps {
+                dir(FRONTEND_DIR) {
+                    script {
+                        bat """
+                        move ../frontend/.dockerignore .
+                        move ../frontend/index.html .
+                        move ../frontend/Dockerfile .
+                        move ../frontend/package.json .
+                        move ../frontend/package-lock.json .
+                        move ../frontend/vite.config.js .
+                        """
+                    }
+                }
+            }
+        }
+        stage('Prepare Nginx') {
+            steps {
+                dir(NGINX_DIR) {
+                    script {
+                        bat """
+                        move ../nginx/Dockerfile .
+                        move ../nginx/default.conf .
+                        """
+                    }
+                }
+            }
+        }
+        stage('Build Frontend') {
+            steps {
+                dir(FRONTEND_DIR) {
+                    script {
+                        bat """
+                        npm install
+                        npm run build
+                        """
+                    }
+                }
+            }
+        }
+        stage('Docker Build and Deploy') {
+            steps {
+                script {
+                    bat """
+                    docker-compose -f docker-compose.yml up --build -d
+                    """
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+        failure {
+            echo 'Pipeline failed!'
+        }
+    }
+}
